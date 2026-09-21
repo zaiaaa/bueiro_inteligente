@@ -1,62 +1,205 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
+import { useEffect, useState } from 'react';
+import { calcularDistancia } from '../services/calcularDistancia';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+const BUEIRO = {
+  latitude: -23.4990588,
+  longitude: -47.4574044,
+};
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const theme = useTheme();
+
+const [userLocation, setUserLocation] =
+  useState<Location.LocationObject | null>(null);
+
+  useEffect(() => {
+    async function getLocation() {
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
+
+      if (status !== 'granted') {
+        console.log('Permissão de localização negada');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      setUserLocation(location);
+
+      console.log('Latitude:', location.coords.latitude);
+      console.log('Longitude:', location.coords.longitude);
+    }
+
+    getLocation();
+  }, []);
+
+  const testarNotificacao = async () => {
+    const { status } = await Notifications.requestPermissionsAsync();
+
+    if (status !== 'granted') {
+      alert('Permissão para notificações não concedida.');
+      return;
+    }
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🚨 ALAGAMENTO DETECTADO',
+        body: 'O bueiro BUE-001 registrou nível de alagamento.',
+        sound: 'default',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: 2,
+      },
+    });
+  };
+
+  const distancia = userLocation
+  ? calcularDistancia(
+      userLocation.coords.latitude,
+      userLocation.coords.longitude,
+      BUEIRO.latitude,
+      BUEIRO.longitude
+    )
+  : null;
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
+      {/* Cabeçalho */}
+      <ThemedView style={styles.header}>
+        <ThemedText type="subtitle">
+          Bueiro Inteligente
         </ThemedText>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        <ThemedText
+          type="small"
+          themeColor="textSecondary"
+        >
+          Monitoramento em tempo real
+        </ThemedText>
+      </ThemedView>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
+      {/* Mapa */}
+      <View style={styles.mapContainer}>
+        <MapView
+          style={styles.map}
+          showsUserLocation={true}
+          initialRegion={{
+            latitude: BUEIRO.latitude,
+            longitude: BUEIRO.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }}
+        >
+          <Marker
+            coordinate={BUEIRO}
+            title="ALAGAMENTO REGISTRADO"
+            description="Centro - Sorocaba"
+            pinColor="red"
+          />
+        </MapView>
+      </View>
+
+      {/* Status */}
+      <ThemedView
+        type="backgroundElement"
+        style={styles.statusCard}
+      >
+        <View style={styles.statusRow}>
+          <View style={styles.statusDot} />
+
+          <View style={styles.statusInfo}>
+            <ThemedText type="smallbold">
+              Alagamento detectado
+            </ThemedText>
+
+            <ThemedText
+              type="small"
+              themeColor="textSecondary"
+            >
+              BUE-001
+            </ThemedText>
+            {distancia !== null && (
+              <ThemedText
+              type="small"
+              themeColor="textSecondary">
+              Distância: {distancia.toFixed(2)} km
+              </ThemedText>
+            )}
+          </View>
+        </View>
+
+        <ThemedText
+          type="small"
+          themeColor="textSecondary"
+          style={styles.address}
+        >
+          📍 Centro - Sorocaba/SP
+        </ThemedText>
+      </ThemedView>
+
+      {/* Histórico */}
+      <Pressable
+        onPress={() => router.push('/historico')}
+        style={({ pressed }) => [
+          styles.historyButton,
+          {
+            backgroundColor: '#727272',
+          },
+          pressed && styles.pressed,
+        ]}
+      >
+        <ThemedText
+          style={styles.historyText}
+          lightColor="#FFFFFF"
+          darkColor="#FFFFFF"
+        >
+          📋  Ver histórico
+        </ThemedText>
+      </Pressable>
+
+      <Pressable
+  onPress={testarNotificacao}
+  style={({ pressed }) => [
+    styles.historyButton,
+    {
+      backgroundColor: theme.link,
+    },
+    pressed && styles.pressed,
+  ]}
+>
+  <ThemedText
+    style={styles.historyText}
+    lightColor="#FFFFFF"
+    darkColor="#FFFFFF"
+  >
+    🔔 Testar notificação
+  </ThemedText>
+</Pressable>
+
     </ThemedView>
   );
 }
@@ -64,35 +207,77 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
     paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    paddingTop: Spacing.six,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+
+  header: {
+    gap: Spacing.one,
+    marginBottom: Spacing.four,
   },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
+
+  mapContainer: {
+    height: 300,
     borderRadius: Spacing.four,
+    overflow: 'hidden',
+
+    // Android
+    elevation: 4,
+
+    // iOS
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+
+  map: {
+    flex: 1,
+  },
+
+  statusCard: {
+    marginTop: Spacing.four,
+    padding: Spacing.four,
+    borderRadius: Spacing.four,
+  },
+
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  statusDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#E53935',
+    marginRight: Spacing.three,
+  },
+
+  statusInfo: {
+    gap: 2,
+  },
+
+  address: {
+    marginTop: Spacing.three,
+  },
+
+  historyButton: {
+    height: 54,
+    borderRadius: Spacing.four,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.four,
+  },
+
+  historyText: {
+    fontWeight: '700',
+  },
+
+  pressed: {
+    opacity: 0.7,
   },
 });
