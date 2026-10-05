@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
+// import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from 'react';
 import { calcularDistancia } from '../services/calcularDistancia';
 
@@ -16,14 +16,14 @@ const BUEIRO = {
   longitude: -47.4574044,
 };
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Notifications.setNotificationHandler({
+//   handleNotification: async () => ({
+//     shouldShowBanner: true,
+//     shouldShowList: true,
+//     shouldPlaySound: true,
+//     shouldSetBadge: false,
+//   }),
+// });  Comentar o notificacoes porque o expo Go nao suporta mais a partir do SDK53
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -55,26 +55,26 @@ const [userLocation, setUserLocation] =
     getLocation();
   }, []);
 
-  const testarNotificacao = async () => {
-    const { status } = await Notifications.requestPermissionsAsync();
+  // const testarNotificacao = async () => {
+  //   const { status } = await Notifications.requestPermissionsAsync();
 
-    if (status !== 'granted') {
-      alert('Permissão para notificações não concedida.');
-      return;
-    }
+  //   if (status !== 'granted') {
+  //     alert('Permissão para notificações não concedida.');
+  //     return;
+  //   }
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '🚨 ALAGAMENTO DETECTADO',
-        body: 'O bueiro BUE-001 registrou nível de alagamento.',
-        sound: 'default',
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: 2,
-      },
-    });
-  };
+  //   await Notifications.scheduleNotificationAsync({
+  //     content: {
+  //       title: '🚨 ALAGAMENTO DETECTADO',
+  //       body: 'O bueiro BUE-001 registrou nível de alagamento.',
+  //       sound: 'default',
+  //     },
+  //     trigger: {
+  //       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+  //       seconds: 2,
+  //     },
+  //   });
+  // };
 
   const distancia = userLocation
   ? calcularDistancia(
@@ -181,25 +181,7 @@ const [userLocation, setUserLocation] =
         </ThemedText>
       </Pressable>
 
-      <Pressable
-  onPress={testarNotificacao}
-  style={({ pressed }) => [
-    styles.historyButton,
-    {
-      backgroundColor: theme.link,
-    },
-    pressed && styles.pressed,
-  ]}
->
-  <ThemedText
-    style={styles.historyText}
-    lightColor="#FFFFFF"
-    darkColor="#FFFFFF"
-  >
-    🔔 Testar notificação
-  </ThemedText>
-</Pressable>
-
+  
     </ThemedView>
   );
 }
