@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 import { ThemedText } from '@/components/themed-text';
@@ -9,6 +9,7 @@ import { useTheme } from '@/hooks/use-theme';
 import * as Location from 'expo-location';
 // import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from 'react';
+import { api } from "../services/api";
 import { calcularDistancia } from '../services/calcularDistancia';
 
 const BUEIRO = {
@@ -33,6 +34,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const theme = useTheme();
 
+  const [alagamentosAtivos, setAlagamentosAtivos] = useState<any[]>([]);
   const [userLocation, setUserLocation] =
     useState<Location.LocationObject | null>(null);
 
@@ -56,8 +58,16 @@ export default function HomeScreen() {
       console.log('Longitude:', location.coords.longitude);
     }
 
+    async function fetchData() {
+      const {data: alagamentos} = await api.get("/alagamentos_ativos")
+      setAlagamentosAtivos(alagamentos);
+    }
+
+    fetchData();
     getLocation();
   }, []);
+
+  console.log("Alagamentos ativos:", alagamentosAtivos);
 
   // const testarNotificacao = async () => {
   //   const { status } = await Notifications.requestPermissionsAsync();
@@ -91,6 +101,12 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <ScrollView
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled={true}
+    >
       {/* Cabeçalho */}
       <View style={styles.header}>
         <ThemedText type="subtitle" style={styles.title} numberOfLines={1}>
@@ -123,60 +139,110 @@ export default function HomeScreen() {
             longitudeDelta: 0.01,
           }}
         >
+          
+        {alagamentosAtivos.map((alagamento) => (
           <Marker
-            coordinate={BUEIRO}
-            title="ALAGAMENTO REGISTRADO"
-            description="Centro - Sorocaba"
+            key={alagamento.id}
+            coordinate={{
+              latitude: Number(alagamento.latitude),
+              longitude: Number(alagamento.longitude),
+            }}
+            title={`ALAGAMENTO - ${alagamento.codigoDispositivo}`}
+            description={`Status: ${alagamento.status}`}
             anchor={{ x: 0.5, y: 0.5 }}
           >
             <View style={styles.markerHalo}>
               <View style={styles.markerCore} />
             </View>
           </Marker>
+        ))}
+
         </MapView>
       </View>
 
-      {/* Status (sobrepõe a base do mapa) */}
-      <ThemedView type="backgroundElement" style={styles.statusCard}>
-        <View style={styles.statusHeader}>
-          <View style={styles.statusIcon}>
-            <ThemedText style={styles.statusIconText}>⚠️</ThemedText>
-          </View>
+            {/* Status dos alagamentos */}
+      {alagamentosAtivos.map((alagamento) => {
+        const distanciaAlagamento = userLocation
+          ? calcularDistancia(
+              userLocation.coords.latitude,
+              userLocation.coords.longitude,
+              Number(alagamento.latitude),
+              Number(alagamento.longitude)
+            )
+          : null;
 
-          <View style={styles.statusInfo}>
-            <ThemedText type="smallbold">Alagamento detectado</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Bueiro BUE-001
-            </ThemedText>
-          </View>
+        return (
+          <ThemedView
+            key={alagamento.id}
+            type="backgroundElement"
+            style={styles.statusCard}
+          >
+            <View style={styles.statusHeader}>
+              <View style={styles.statusIcon}>
+                <ThemedText style={styles.statusIconText}>
+                  ⚠️
+                </ThemedText>
+              </View>
 
-          <View style={styles.badge}>
-            <ThemedText type="smallbold" style={styles.badgeText}>
-              Alerta
-            </ThemedText>
-          </View>
-        </View>
+              <View style={styles.statusInfo}>
+                <ThemedText type="smallbold">
+                  Alagamento detectado
+                </ThemedText>
 
-        <View style={styles.divider} />
+                <ThemedText
+                  type="small"
+                  themeColor="textSecondary"
+                >
+                  Bueiro {alagamento.codigoDispositivo}
+                </ThemedText>
+              </View>
 
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Local
-            </ThemedText>
-            <ThemedText type="smallbold">Centro</ThemedText>
-          </View>
+              <View style={styles.badge}>
+                <ThemedText
+                  type="smallbold"
+                  style={styles.badgeText}
+                >
+                  {alagamento.status}
+                </ThemedText>
+              </View>
+            </View>
 
-          <View style={styles.metaItem}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Distância
-            </ThemedText>
-            <ThemedText type="smallbold">
-              {distancia !== null ? `${distancia.toFixed(2)} km` : 'Calculando...'}
-            </ThemedText>
-          </View>
-        </View>
-      </ThemedView>
+            <View style={styles.divider} />
+
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <ThemedText
+                  type="small"
+                  themeColor="textSecondary"
+                >
+                  Coordenadas
+                </ThemedText>
+
+                <ThemedText type="smallbold">
+                  {Number(alagamento.latitude).toFixed(5)},
+                  {' '}
+                  {Number(alagamento.longitude).toFixed(5)}
+                </ThemedText>
+              </View>
+
+              <View style={styles.metaItem}>
+                <ThemedText
+                  type="small"
+                  themeColor="textSecondary"
+                >
+                  Distância
+                </ThemedText>
+
+                <ThemedText type="smallbold">
+                  {distanciaAlagamento !== null
+                    ? `${distanciaAlagamento.toFixed(2)} km`
+                    : 'Calculando...'}
+                </ThemedText>
+              </View>
+            </View>
+          </ThemedView>
+        );
+      })}
 
       {/* Histórico */}
       <Pressable
@@ -194,6 +260,8 @@ export default function HomeScreen() {
           Ver histórico
         </ThemedText>
       </Pressable>
+
+    </ScrollView>
     </ThemedView>
   );
 }
@@ -205,6 +273,16 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.six,
     paddingBottom: Spacing.four,
   },
+
+  scrollView: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: Spacing.four,
+  },
+
 
   /* Cabeçalho */
   header: {
@@ -248,7 +326,7 @@ const styles = StyleSheet.create({
   /* Mapa */
   mapContainer: {
     flex: 1,
-    minHeight: 260,
+    minHeight: 300,
     borderRadius: 24,
     overflow: 'hidden',
   },
