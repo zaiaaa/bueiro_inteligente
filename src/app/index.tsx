@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
+// import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from 'react';
 import { calcularDistancia } from '../services/calcularDistancia';
 
@@ -16,21 +16,25 @@ const BUEIRO = {
   longitude: -47.4574044,
 };
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+const ALERTA = '#E53935';
+const ALERTA_SUAVE = 'rgba(229, 57, 53, 0.16)';
+const ONLINE = '#2E9E5B';
+
+// Notifications.setNotificationHandler({
+//   handleNotification: async () => ({
+//     shouldShowBanner: true,
+//     shouldShowList: true,
+//     shouldPlaySound: true,
+//     shouldSetBadge: false,
+//   }),
+// });  Comentar o notificacoes porque o expo Go nao suporta mais a partir do SDK53
 
 export default function HomeScreen() {
   const router = useRouter();
   const theme = useTheme();
 
-const [userLocation, setUserLocation] =
-  useState<Location.LocationObject | null>(null);
+  const [userLocation, setUserLocation] =
+    useState<Location.LocationObject | null>(null);
 
   useEffect(() => {
     async function getLocation() {
@@ -55,52 +59,57 @@ const [userLocation, setUserLocation] =
     getLocation();
   }, []);
 
-  const testarNotificacao = async () => {
-    const { status } = await Notifications.requestPermissionsAsync();
+  // const testarNotificacao = async () => {
+  //   const { status } = await Notifications.requestPermissionsAsync();
 
-    if (status !== 'granted') {
-      alert('Permissão para notificações não concedida.');
-      return;
-    }
+  //   if (status !== 'granted') {
+  //     alert('Permissão para notificações não concedida.');
+  //     return;
+  //   }
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '🚨 ALAGAMENTO DETECTADO',
-        body: 'O bueiro BUE-001 registrou nível de alagamento.',
-        sound: 'default',
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: 2,
-      },
-    });
-  };
+  //   await Notifications.scheduleNotificationAsync({
+  //     content: {
+  //       title: '🚨 ALAGAMENTO DETECTADO',
+  //       body: 'O bueiro BUE-001 registrou nível de alagamento.',
+  //       sound: 'default',
+  //     },
+  //     trigger: {
+  //       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+  //       seconds: 2,
+  //     },
+  //   });
+  // };
 
   const distancia = userLocation
-  ? calcularDistancia(
-      userLocation.coords.latitude,
-      userLocation.coords.longitude,
-      BUEIRO.latitude,
-      BUEIRO.longitude
-    )
-  : null;
+    ? calcularDistancia(
+        userLocation.coords.latitude,
+        userLocation.coords.longitude,
+        BUEIRO.latitude,
+        BUEIRO.longitude
+      )
+    : null;
 
   return (
     <ThemedView style={styles.container}>
-
       {/* Cabeçalho */}
-      <ThemedView style={styles.header}>
-        <ThemedText type="subtitle">
+      <View style={styles.header}>
+        <ThemedText type="subtitle" style={styles.title} numberOfLines={1}>
           Bueiro Inteligente
         </ThemedText>
 
-        <ThemedText
-          type="small"
-          themeColor="textSecondary"
-        >
-          Monitoramento em tempo real
-        </ThemedText>
-      </ThemedView>
+        <View style={styles.subHeader}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Sorocaba, SP
+          </ThemedText>
+
+          <View style={styles.livePill}>
+            <View style={styles.liveDot} />
+            <ThemedText type="small" style={styles.liveText}>
+              Ao vivo
+            </ThemedText>
+          </View>
+        </View>
+      </View>
 
       {/* Mapa */}
       <View style={styles.mapContainer}>
@@ -118,47 +127,55 @@ const [userLocation, setUserLocation] =
             coordinate={BUEIRO}
             title="ALAGAMENTO REGISTRADO"
             description="Centro - Sorocaba"
-            pinColor="red"
-          />
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <View style={styles.markerHalo}>
+              <View style={styles.markerCore} />
+            </View>
+          </Marker>
         </MapView>
       </View>
 
-      {/* Status */}
-      <ThemedView
-        type="backgroundElement"
-        style={styles.statusCard}
-      >
-        <View style={styles.statusRow}>
-          <View style={styles.statusDot} />
+      {/* Status (sobrepõe a base do mapa) */}
+      <ThemedView type="backgroundElement" style={styles.statusCard}>
+        <View style={styles.statusHeader}>
+          <View style={styles.statusIcon}>
+            <ThemedText style={styles.statusIconText}>⚠️</ThemedText>
+          </View>
 
           <View style={styles.statusInfo}>
-            <ThemedText type="smallbold">
-              Alagamento detectado
+            <ThemedText type="smallbold">Alagamento detectado</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Bueiro BUE-001
             </ThemedText>
+          </View>
 
-            <ThemedText
-              type="small"
-              themeColor="textSecondary"
-            >
-              BUE-001
+          <View style={styles.badge}>
+            <ThemedText type="smallbold" style={styles.badgeText}>
+              Alerta
             </ThemedText>
-            {distancia !== null && (
-              <ThemedText
-              type="small"
-              themeColor="textSecondary">
-              Distância: {distancia.toFixed(2)} km
-              </ThemedText>
-            )}
           </View>
         </View>
 
-        <ThemedText
-          type="small"
-          themeColor="textSecondary"
-          style={styles.address}
-        >
-          📍 Centro - Sorocaba/SP
-        </ThemedText>
+        <View style={styles.divider} />
+
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Local
+            </ThemedText>
+            <ThemedText type="smallbold">Centro</ThemedText>
+          </View>
+
+          <View style={styles.metaItem}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Distância
+            </ThemedText>
+            <ThemedText type="smallbold">
+              {distancia !== null ? `${distancia.toFixed(2)} km` : 'Calculando...'}
+            </ThemedText>
+          </View>
+        </View>
       </ThemedView>
 
       {/* Histórico */}
@@ -166,9 +183,6 @@ const [userLocation, setUserLocation] =
         onPress={() => router.push('/historico')}
         style={({ pressed }) => [
           styles.historyButton,
-          {
-            backgroundColor: '#727272',
-          },
           pressed && styles.pressed,
         ]}
       >
@@ -177,29 +191,9 @@ const [userLocation, setUserLocation] =
           lightColor="#FFFFFF"
           darkColor="#FFFFFF"
         >
-          📋  Ver histórico
+          Ver histórico
         </ThemedText>
       </Pressable>
-
-      <Pressable
-  onPress={testarNotificacao}
-  style={({ pressed }) => [
-    styles.historyButton,
-    {
-      backgroundColor: theme.link,
-    },
-    pressed && styles.pressed,
-  ]}
->
-  <ThemedText
-    style={styles.historyText}
-    lightColor="#FFFFFF"
-    darkColor="#FFFFFF"
-  >
-    🔔 Testar notificação
-  </ThemedText>
-</Pressable>
-
     </ThemedView>
   );
 }
@@ -209,75 +203,154 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.six,
+    paddingBottom: Spacing.four,
   },
 
+  /* Cabeçalho */
   header: {
-    gap: Spacing.one,
-    marginBottom: Spacing.four,
+    gap: Spacing.two,
+    marginBottom: Spacing.three,
   },
 
+  title: {
+    fontSize: 28,
+    lineHeight: 34,
+  },
+
+  subHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+
+  livePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(46, 158, 91, 0.14)',
+  },
+
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: ONLINE,
+  },
+
+  liveText: {
+    color: ONLINE,
+    fontWeight: '600',
+  },
+
+  /* Mapa */
   mapContainer: {
-    height: 300,
-    borderRadius: Spacing.four,
+    flex: 1,
+    minHeight: 260,
+    borderRadius: 24,
     overflow: 'hidden',
-
-    // Android
-    elevation: 4,
-
-    // iOS
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
   },
 
   map: {
     flex: 1,
   },
 
-  statusCard: {
-    marginTop: Spacing.four,
-    padding: Spacing.four,
-    borderRadius: Spacing.four,
+  markerHalo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: ALERTA_SUAVE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  statusRow: {
+  markerCore: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: ALERTA,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+
+  /* Card de status */
+  statusCard: {
+    marginTop: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: 24,
+  },
+
+  statusHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.three,
   },
 
-  statusDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#E53935',
-    marginRight: Spacing.three,
+  statusIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: ALERTA_SUAVE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  statusIconText: {
+    fontSize: 20,
+    lineHeight: 26,
   },
 
   statusInfo: {
+    flex: 1,
     gap: 2,
   },
 
-  address: {
-    marginTop: Spacing.three,
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: ALERTA,
   },
 
+  badgeText: {
+    color: '#FFFFFF',
+  },
+
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(128, 128, 128, 0.35)',
+    marginVertical: Spacing.three,
+  },
+
+  metaRow: {
+    flexDirection: 'row',
+    gap: Spacing.four,
+  },
+
+  metaItem: {
+    flex: 1,
+    gap: 2,
+  },
+
+  /* Botão histórico */
   historyButton: {
     height: 54,
-    borderRadius: Spacing.four,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.four,
+    backgroundColor: '#3C3C3C',
   },
 
   historyText: {
     fontWeight: '700',
+    fontSize: 16,
   },
 
   pressed: {
-    opacity: 0.7,
+    opacity: 0.75,
+    transform: [{ scale: 0.99 }],
   },
 });
