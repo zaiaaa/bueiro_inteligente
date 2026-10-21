@@ -59,9 +59,33 @@ export default function HomeScreen() {
     }
 
     async function fetchData() {
-      const {data: alagamentos} = await api.get("/alagamentos_ativos")
-      setAlagamentosAtivos(alagamentos);
-    }
+      const { data: alagamentos } = await api.get("/alagamentos_ativos");
+
+      const alagamentosComEndereco = await Promise.all(
+        alagamentos.map(async (alagamento) => {
+          try {
+            const endereco = await Location.reverseGeocodeAsync({
+              latitude: Number(alagamento.latitude),
+              longitude: Number(alagamento.longitude),
+            });
+
+            return {
+              ...alagamento,
+              endereco: endereco[0],
+            };
+          } catch (error) {
+            console.log("Erro ao buscar endereço:", error);
+
+            return {
+              ...alagamento,
+              endereco: null,
+            };
+          }
+        })
+      );
+
+  setAlagamentosAtivos(alagamentosComEndereco);
+}
 
     fetchData();
     getLocation();
