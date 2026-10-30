@@ -92,6 +92,7 @@ export default function HomeScreen() {
   }, []);
 
   console.log("Alagamentos ativos:", alagamentosAtivos);
+  //console.log("Alagamentos c end:", alagamentosComEndereco);
 
   // const testarNotificacao = async () => {
   //   const { status } = await Notifications.requestPermissionsAsync();
@@ -172,7 +173,11 @@ export default function HomeScreen() {
               longitude: Number(alagamento.longitude),
             }}
             title={`ALAGAMENTO - ${alagamento.codigoDispositivo}`}
-            description={`Status: ${alagamento.status}`}
+            description={`📍 ${alagamento.endereco?.street || "Rua não encontrada"}${
+                alagamento.endereco?.streetNumber
+                  ? `, ${alagamento.endereco.streetNumber}`
+                  : ""
+              }\nStatus: ${alagamento.status}`}
             anchor={{ x: 0.5, y: 0.5 }}
           >
             <View style={styles.markerHalo}>
@@ -239,13 +244,13 @@ export default function HomeScreen() {
                   type="small"
                   themeColor="textSecondary"
                 >
-                  Coordenadas
+                  Localização
                 </ThemedText>
 
                 <ThemedText type="smallbold">
-                  {Number(alagamento.latitude).toFixed(5)},
+                  {alagamento.endereco.street},
                   {' '}
-                  {Number(alagamento.longitude).toFixed(5)}
+                  {alagamento.endereco.district}
                 </ThemedText>
               </View>
 
