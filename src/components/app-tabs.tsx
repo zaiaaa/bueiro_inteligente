@@ -27,6 +27,16 @@ export default function AppTabs() {
           renderingMode="template"
         />
       </NativeTabs.Trigger>
+
+      {/* HISTÓRICO */}
+      <NativeTabs.Trigger name="historico">
+        <NativeTabs.Trigger.Label>Histórico</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'clock', selected: 'clock.fill' }}
+          md="history"
+        />
+      </NativeTabs.Trigger>
+
     </NativeTabs>
   );
 }
